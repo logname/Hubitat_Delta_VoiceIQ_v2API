@@ -28,6 +28,10 @@ Change history:
 1.11 - SebastienViel - Updated Usage Refresh code to show previous day when the value received was 0
 1.12 - green.aarond - Updated with non-legacy deltafaucet device URL
 1.13 - green.aarond - Added dispense options for other units (cL, dL, L, fl oz, c, pt, qt, gal) + 'custom' options to fill a glass or a coffee pot
+1.14 - logname - Changed driver 'Preferences' title and description to fit new MAC address method
+1.15 - logname - Changed apiUrl call to include 'macAddress='
+1.16 - logname - Removed /v2 from httpExec and added /v2 to '+path' parameter [toggle water must use /v3 path to function]
+1.17 - logname - Fixed typo in queryUsageReport
 
 */
 //import groovy.json.JsonSlurper
@@ -35,7 +39,7 @@ Change history:
 metadata
 {
     definition(
-        name: "Delta VoiceIQ Faucet",
+        name: "Delta VoiceIQ Faucet v2",
         namespace: "SebastienViel",
         author: "Sébastien Viel and TomW",
         importUrl: "https://raw.githubusercontent.com/SebastienViel/Hubitat_Delta_Faucet/main/Hubitat_Delta_Faucet_Driver"
@@ -66,7 +70,7 @@ metadata
 }
 preferences
 {
-    input(name: "delta_device_id", type: "text", title: "Delta Device ID", description: "Enter Delta Device ID", defaultValue: "")
+    input(name: "delta_device_id", type: "text", title: "Delta Device macAddress", description: "Enter Device MAC Address", defaultValue: "")
     input(name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true)
 }
 def installed()
@@ -120,10 +124,10 @@ def queryUsageReport(interval)
     try
     {
         if(logEnable){log.debug "Getting Usage Report for ${interval} interval."}
-        def response = httpExec("GET", "UsageReport?deviceId=${delta_device_id}&interval=${interval}")
+        def response = httpExec("GET", "/v2/UsageReport?macAddress=${delta_device_id}&interval=${interval}")
         if(response?.status?.toInteger() == 200)
         {
-            if (logEnale){log.info "Usage Report = ${response.data}"}
+            if (logEnable){log.info "Usage Report = ${response.data}"}
             return response.data?.retObject?.datasets?.getAt(0)?.data
         }
         else
@@ -150,7 +154,7 @@ private toggleWater(String toggle)
     {
         if (logEnable){log.debug "Preparing the ${toggle} command to send to Delta."}
         
-        def response = httpExec("POST", "toggleWater?deviceId=${delta_device_id}&toggle=${toggle}")
+        def response = httpExec("POST", "/v3/toggleWater?macAddress=${delta_device_id}&toggle=${toggle}")
         if (logEnable){log.debug "Response Status (from toggleWater): ${response.status}"}
         if (logEnable){log.debug "Response Data (from toggleWater): ${response.data}"}
         
@@ -175,7 +179,7 @@ private dispense_mL(mL_toDispense)
     try
     {
         if (logEnable){log.debug "Preparing the ${mL_toDispense} mL to dispense command to send to Delta."}
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${mL_toDispense}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${mL_toDispense}")
         if (logEnable){log.debug "Response Status (from dispense_mL): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_mL): ${response.data}"}
         
@@ -220,7 +224,7 @@ private dispense_fl_oz(fl_oz_toDispense)
         
         if (logEnable){log.debug "Preparing the ${fl_oz_in_mL} mL to dispense command to send to Delta (calculated from ${fl_oz_toDispense} fl. oz.)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${fl_oz_in_mL}")
+		def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${fl_oz_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_fl_oz): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_fl_oz): ${response.data}"}
         
@@ -265,7 +269,7 @@ private dispense_c(c_toDispense)
         
         if (logEnable){log.debug "Preparing the ${c_in_mL} mL to dispense command to send to Delta (calculated from ${c_toDispense}c)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${c_in_mL}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${c_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_c): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_c): ${response.data}"}
         
@@ -310,7 +314,7 @@ private dispense_pt(pt_toDispense)
         
         if (logEnable){log.debug "Preparing the ${pt_in_mL} mL to dispense command to send to Delta (calculated from ${pt_toDispense}pt)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${pt_in_mL}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${pt_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_pt): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_pt): ${response.data}"}
         
@@ -355,7 +359,7 @@ private dispense_qt(qt_toDispense)
         
         if (logEnable){log.debug "Preparing the ${qt_in_mL} mL to dispense command to send to Delta (calculated from ${qt_toDispense}qt)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${qt_in_mL}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${qt_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_qt): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_qt): ${response.data}"}
         
@@ -400,7 +404,7 @@ private dispense_gal(gal_toDispense)
         
         if (logEnable){log.debug "Preparing the ${gal_in_mL} mL to dispense command to send to Delta (calculated from ${gal_toDispense}gal)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${gal_in_mL}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${gal_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_gal): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_gal): ${response.data}"}
         
@@ -445,7 +449,7 @@ private dispense_cL(cL_toDispense)
         
         if (logEnable){log.debug "Preparing the ${cL_in_mL} mL to dispense command to send to Delta (calculated from ${cL_toDispense} cL)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${cL_in_mL}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${cL_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_cL): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_cL): ${response.data}"}
         
@@ -490,7 +494,7 @@ private dispense_dL(dL_toDispense)
         
         if (logEnable){log.debug "Preparing the ${dL_in_mL} mL to dispense command to send to Delta (calculated from ${dL_toDispense} dL)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${dL_in_mL}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${dL_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_dL): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_dL): ${response.data}"}
         
@@ -535,7 +539,7 @@ private dispense_L(L_toDispense)
         
         if (logEnable){log.debug "Preparing the ${L_in_mL} mL to dispense command to send to Delta (calculated from ${L_toDispense} L)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${L_in_mL}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${L_in_mL}")
         if (logEnable){log.debug "Response Status (from dispense_L): ${response.status}"}
         if (logEnable){log.debug "Response Data (from dispense_L): ${response.data}"}
         
@@ -578,7 +582,7 @@ private fill_glass(glass_fill)
         
         if (logEnable){log.debug "Preparing the ${glassful} mL to dispense command to send to Delta (one 12 fl. oz. glass of water)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${glassful}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${glassful}")
         if (logEnable){log.debug "Response Status (from fill_glass): ${response.status}"}
         if (logEnable){log.debug "Response Data (from fill_glass): ${response.data}"}
         
@@ -621,7 +625,7 @@ private fill_coffee_pot(coffee_pot_fill)
         
         if (logEnable){log.debug "Preparing the ${coffeepot} mL to dispense command to send to Delta (32 fl. oz. of water; about 1 coffee pot)."}
         
-        def response = httpExec("POST", "dispense?deviceId=${delta_device_id}&milliliters=${coffeepot}")
+        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${coffeepot}")
         if (logEnable){log.debug "Response Status (from fill_coffee_pot): ${response.status}"}
         if (logEnable){log.debug "Response Data (from fill_coffee_pot): ${response.data}"}
         
