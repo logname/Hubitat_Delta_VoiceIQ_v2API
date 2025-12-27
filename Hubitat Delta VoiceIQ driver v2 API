@@ -32,6 +32,8 @@ Change history:
 1.15 - logname - Changed apiUrl call to include 'macAddress='
 1.16 - logname - Removed /v2 from httpExec and added /v2 to '+path' parameter [toggle water must use /v3 path to function]
 1.17 - logname - Fixed typo in queryUsageReport and missing 0 in millileter to Liter conversion
+1.18 - TomW - Code optimization
+1.19 - logname - Add notation to omit colons and spaces from MAC Address in device Preferences
 
 */
 //import groovy.json.JsonSlurper
@@ -68,27 +70,33 @@ metadata
         command "queryUsageReport", [[name: "Time interval", title: "Query Usage Report", type:"ENUM", constraints: knownTimePeriods().keySet()]]        
      }
 }
+
 preferences
 {
-    input(name: "delta_device_id", type: "text", title: "Delta Device macAddress", description: "Enter Device MAC Address", defaultValue: "")
+    input(name: "delta_device_id", type: "text", title: "Delta Device macAddress", description: "Enter Device MAC Address (without : or spaces)", defaultValue: "")
     input(name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true)
 }
+
 def installed()
 {
     log.debug "installed"
 }
+
 def updated()
 {
     log.debug "updated"
 }
+
 def on()
 {
     toggleWater("on")
 }
+
 def off()
 {
     toggleWater("off")
 }
+
 def refresh()
 {
     def resp
@@ -111,12 +119,14 @@ def refresh()
         sendEvent(name: it.key, value: value)
     }
 }
+
 def knownTimePeriods()
 {
     def periods = [ usageLastDay: 0, usageLastWeek: 1, usageLastMonth: 2, usageLastYear: 3 ]
     
     return periods
 }
+
 def queryUsageReport(interval)
 {
     interval = knownTimePeriods()?.getAt(interval)
@@ -140,14 +150,17 @@ def queryUsageReport(interval)
         log.error "Error Usage Report: ${e.message}"
     }
 }
+
 def saveToken(token)
 {
     device.updateDataValue("token", token)
 }
+
 def currentToken()
 {
     return device.getDataValue("token")
 }
+
 private toggleWater(String toggle)
 {    
     try
@@ -174,6 +187,7 @@ private toggleWater(String toggle)
         log.error "Error toggling water: ${e.message}"
     }
 }
+
 private dispense_mL(mL_toDispense)
 {   
     try
@@ -189,9 +203,7 @@ private dispense_mL(mL_toDispense)
             //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
             if (logEnable){ log.debug "mL_toDispense is set to ${mL_toDispense}"}
             
-            def pauseDuration = 10
-            
-            pauseDuration = mL_toDispense.toInteger() / 70
+            def pauseDuration = mL_toDispense.toInteger() / 70
             if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
             
             if(pauseDuration.toInteger() > 300)
@@ -213,452 +225,87 @@ private dispense_mL(mL_toDispense)
         log.error "Error dispensing water: ${e.message}"
     }
 }
+
 private dispense_fl_oz(fl_oz_toDispense)
-{   
-    try
-    {
-        
-        def fl_oz_in_mL = 30
-        
-        fl_oz_in_mL = fl_oz_toDispense.toInteger() * 30
-        
-        if (logEnable){log.debug "Preparing the ${fl_oz_in_mL} mL to dispense command to send to Delta (calculated from ${fl_oz_toDispense} fl. oz.)."}
-        
-		def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${fl_oz_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_fl_oz): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_fl_oz): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${fl_oz_toDispense} fl. oz. (sent as ${fl_oz_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${fl_oz_in_mL} (calculated from ${fl_oz_toDispense} fl. oz.)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = fl_oz_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense fl oz failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{ 
+    def fl_oz_in_mL = fl_oz_toDispense.toInteger() * 30
+    if (logEnable){log.debug "Preparing the ${fl_oz_in_mL} mL to dispense command to send to Delta (calculated from ${fl_oz_toDispense} fl. oz.)."}
+    
+    dispense_mL(fl_oz_in_mL)
 }
+
 private dispense_c(c_toDispense)
-{   
-    try
-    {
-        
-        def c_in_mL = 237
-        
-        c_in_mL = c_toDispense.toInteger() * 237
-        
-        if (logEnable){log.debug "Preparing the ${c_in_mL} mL to dispense command to send to Delta (calculated from ${c_toDispense}c)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${c_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_c): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_c): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${c_toDispense}c (sent as ${c_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${c_in_mL} (calculated from ${c_toDispense}c)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = c_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense c failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{
+    def c_in_mL = c_toDispense.toInteger() * 237
+    if (logEnable){log.debug "Preparing the ${c_in_mL} mL to dispense command to send to Delta (calculated from ${c_toDispense}c)."}
+    
+    dispense_mL(c_in_mL)
 }
+
 private dispense_pt(pt_toDispense)
-{   
-    try
-    {
-        
-        def pt_in_mL = 473
-        
-        pt_in_mL = pt_toDispense.toInteger() * 473
-        
-        if (logEnable){log.debug "Preparing the ${pt_in_mL} mL to dispense command to send to Delta (calculated from ${pt_toDispense}pt)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${pt_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_pt): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_pt): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${pt_toDispense}pt (sent as ${pt_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${pt_in_mL} (calculated from ${pt_toDispense}pt)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = pt_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense pt failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{
+    def pt_in_mL = pt_toDispense.toInteger() * 473
+    if (logEnable){log.debug "Preparing the ${pt_in_mL} mL to dispense command to send to Delta (calculated from ${pt_toDispense}pt)."}
+    
+    dispense_mL(pt_in_mL)
 }
+
 private dispense_qt(qt_toDispense)
-{   
-    try
-    {
-        
-        def qt_in_mL = 946
-        
-        qt_in_mL = qt_toDispense.toInteger() * 946
-        
-        if (logEnable){log.debug "Preparing the ${qt_in_mL} mL to dispense command to send to Delta (calculated from ${qt_toDispense}qt)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${qt_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_qt): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_qt): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${qt_toDispense}qt (sent as ${qt_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${qt_in_mL} (calculated from ${qt_toDispense}qt)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = qt_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense qt failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{
+    def qt_in_mL = qt_toDispense.toInteger() * 946
+    if (logEnable){log.debug "Preparing the ${qt_in_mL} mL to dispense command to send to Delta (calculated from ${qt_toDispense}qt)."}
+    
+    dispense_mL(qt_in_mL)
 }
+
 private dispense_gal(gal_toDispense)
-{   
-    try
-    {
-        
-        def gal_in_mL = 3785
-        
-        gal_in_mL = gal_toDispense.toInteger() * 3785
-        
-        if (logEnable){log.debug "Preparing the ${gal_in_mL} mL to dispense command to send to Delta (calculated from ${gal_toDispense}gal)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${gal_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_gal): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_gal): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${gal_toDispense}gal (sent as ${gal_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${gal_in_mL} (calculated from ${gal_toDispense}gal)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = gal_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense gal failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{
+    def gal_in_mL = gal_toDispense.toInteger() * 3785
+    if (logEnable){log.debug "Preparing the ${gal_in_mL} mL to dispense command to send to Delta (calculated from ${gal_toDispense}gal)."}
+    
+    dispense_mL(gal_in_mL)
 }
+
 private dispense_cL(cL_toDispense)
-{   
-    try
-    {
-        
-        def cL_in_mL = 10
-        
-        cL_in_mL = cL_toDispense.toInteger() * 10
-        
-        if (logEnable){log.debug "Preparing the ${cL_in_mL} mL to dispense command to send to Delta (calculated from ${cL_toDispense} cL)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${cL_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_cL): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_cL): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${cL_toDispense} cL (sent as ${cL_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${cL_in_mL} (calculated from ${cL_toDispense} cL)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = cL_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense cL failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{
+    def cL_in_mL = cL_toDispense.toInteger() * 10
+    if (logEnable){log.debug "Preparing the ${cL_in_mL} mL to dispense command to send to Delta (calculated from ${cL_toDispense} cL)."}
+    
+    dispense_mL(cL_in_mL)
 }
+
 private dispense_dL(dL_toDispense)
-{   
-    try
-    {
-        
-        def dL_in_mL = 100
-        
-        dL_in_mL = dL_toDispense.toInteger() * 100
-        
-        if (logEnable){log.debug "Preparing the ${dL_in_mL} mL to dispense command to send to Delta (calculated from ${dL_toDispense} dL)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${dL_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_dL): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_dL): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${dL_toDispense} dL (sent as ${dL_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${dL_in_mL} (calculated from ${dL_toDispense} dL)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = dL_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense dL failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{
+    def dL_in_mL = dL_toDispense.toInteger() * 100
+    if (logEnable){log.debug "Preparing the ${dL_in_mL} mL to dispense command to send to Delta (calculated from ${dL_toDispense} dL)."}
+    
+    dispense_mL(dL_in_mL)
 }
+
 private dispense_L(L_toDispense)
-{   
-    try
-    {
-        
-        def L_in_mL = 100
-        
-        L_in_mL = L_toDispense.toInteger() * 100
-        
-        if (logEnable){log.debug "Preparing the ${L_in_mL} mL to dispense command to send to Delta (calculated from ${L_toDispense} L)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${L_in_mL}")
-        if (logEnable){log.debug "Response Status (from dispense_L): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_L): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense ${L_toDispense} L (sent as ${L_in_mL} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${L_in_mL} (calculated from ${L_toDispense} L)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = L_in_mL.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Dispense L failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{
+    def L_in_mL = L_toDispense.toInteger() * 1000
+    if (logEnable){log.debug "Preparing the ${L_in_mL} mL to dispense command to send to Delta (calculated from ${L_toDispense} L)."}
+    
+    dispense_mL(L_in_mL)
 }
+
 private fill_glass(glass_fill)
 {   
-    try
-    {
-        
-        def glassful = 355
-        
-        if (logEnable){log.debug "Preparing the ${glassful} mL to dispense command to send to Delta (one 12 fl. oz. glass of water)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${glassful}")
-        if (logEnable){log.debug "Response Status (from fill_glass): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from fill_glass): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense 1 glass (sent as ${glassful} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${glassful} (one 12 fl. oz. glass of water)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = glassful.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Fill glass failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+    def glassful = 355
+    if (logEnable){log.debug "Preparing the ${glassful} mL to dispense command to send to Delta (one 12 fl. oz. glass of water)."}
+    
+    dispense_mL(glassful)
 }
+
 private fill_coffee_pot(coffee_pot_fill)
-{   
-    try
-    {
-        
-        def coffeepot = 943
-        
-        if (logEnable){log.debug "Preparing the ${coffeepot} mL to dispense command to send to Delta (32 fl. oz. of water; about 1 coffee pot)."}
-        
-        def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${coffeepot}")
-        if (logEnable){log.debug "Response Status (from fill_coffee_pot): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from fill_coffee_pot): ${response.data}"}
-        
-        if(response?.status?.toInteger() == 200)
-        {
-            if (logEnable){ log.debug "Dispense 1 coffee pot (sent as ${coffeepot} mL) successful" }
-            //sendEvent(name: "switch", value: "on", descriptionText: "${device.displayName} is on")
-            if (logEnable){ log.debug "mL_toDispense is set to ${coffeepot} (32 fl. oz. of water; about 1 coffee pot)"}
-            
-            def pauseDuration = 10
-            
-            pauseDuration = coffeepot.toInteger() / 70
-            if (logEnable){ log.debug "Pause duration is set to ${pauseDuration}"}
-            
-            if(pauseDuration.toInteger() > 300)
-            {
-                pauseDuration = 300                
-                if (logEnable){ log.debug "Pause duration was changed to ${pauseDuration}"}
-            }
-            pauseDuration = pauseDuration.intValue()
-            
-            sendSwitchState("on", pauseDuration)
-        }
-        else
-        {
-            log.error "Fill coffee pot failed: ${response.status}"
-        }
-    }
-    catch(Exception e)
-    {
-        log.error "Error dispensing water: ${e.message}"
-    }
+{ 
+    def coffeepot = 943
+    if (logEnable){log.debug "Preparing the ${coffeepot} mL to dispense command to send to Delta (32 fl. oz. of water; about 1 coffee pot)."}
+    
+    dispense_mL(coffeepot)
 }
+
 def sendSwitchState(value, timeout = null)
 {
     unschedule(sendSwitchState)
@@ -674,6 +321,7 @@ def sendSwitchState(value, timeout = null)
     }
     if (logEnable) {log.debug "Switch State updated to ${value}."}    
 }
+
 def httpExec(operation, String path)
 {
     def result = null
