@@ -25,10 +25,13 @@ https://community.hubitat.com/t/integration-to-delta-voiceiq/119842?u=sebastien
 8. On the Delta faucet page, click on the blue button labelled **Water Usage - This Week**
 9. Expand the left side of the inspector window
 10. On the **Name** column, click on the result that starts with **UsageReport?macAddress=**
-11. Copy the MAC Address, since you will need later to enter on the **Preferences** tab of the Hubitat driver.
+11. Copy the MAC Address, since you will need later to enter on the **Preferences** tab of the Hubitat driver
+   
+    **Do not include : or spaces in MAC Address**
+    
 12. On the **Headers** tab, under **Request Headers** you will find the required the full **Authorization** token needed.
 
-**NOTE**: Copy the entire Authorization token _after_ the word **Bearer**
+   **NOTE**: Copy the entire Authorization token _after_ the word **Bearer**
 
 <img width="1279" height="618" alt="Screenshot 2025-12-26 at 1 48 27 PM" src="https://github.com/user-attachments/assets/464347e6-ed62-414f-b76a-4c299eda24fc" />
 
