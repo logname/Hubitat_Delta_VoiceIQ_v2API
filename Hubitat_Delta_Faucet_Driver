@@ -31,7 +31,7 @@ Change history:
 1.14 - logname - Changed driver 'Preferences' title and description to fit new MAC address method
 1.15 - logname - Changed apiUrl call to include 'macAddress='
 1.16 - logname - Removed /v2 from httpExec and added /v2 to '+path' parameter [toggle water must use /v3 path to function]
-1.17 - logname - Fixed typo in queryUsageReport
+1.17 - logname - Fixed typo in queryUsageReport and missing 0 in millileter to Liter conversion
 
 */
 //import groovy.json.JsonSlurper
