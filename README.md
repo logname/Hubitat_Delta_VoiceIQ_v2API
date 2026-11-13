@@ -40,3 +40,21 @@ https://community.hubitat.com/t/integration-to-delta-voiceiq/119842?u=sebastien
 
 <img width="1279" height="618" alt="Screenshot 2025-12-26 at 1 48 27 PM" src="https://github.com/user-attachments/assets/464347e6-ed62-414f-b76a-4c299eda24fc" />
 
+
+
+# Warm Up Water
+
+**The driver now includes the Warm Up Water feature. You will need to manually enter your custom device name in the driver preferences for this feature to work.**
+
+1. Select **Device Names** from the hamburger menu
+   
+   <img width="640" height="223" alt="Screenshot 2026-11-13 at 10 59 39 AM" src="https://github.com/user-attachments/assets/7b85c11c-d13b-430f-b16c-e1544f4244cf" />
+   <img width="640" height="215" alt="Screenshot 2026-11-13 at 11 00 17 AM" src="https://github.com/user-attachments/assets/c169ee81-9607-4995-9fe2-0b78c860dbc4" />
+   
+2. Enter your faucet custom device name on the **Preferences** tab of the Hubitat driver
+   
+   <img width="640" height="201" alt="Screenshot 2026-11-13 at 11 03 29 AM" src="https://github.com/user-attachments/assets/e3c942d8-3098-45b9-b6fc-80609cd2c0a7" />
+
+   
+**NOTE**: Unlike the Alexa app, the Delta VoiceIQ web portal does not give any feedback that warming water has started, or a message reminding you to set the faucet handle to HOT. You must make sure you do this yourself, and the only indication you will have that the faucet is using the **Warm Up Water** feature is the pulsing light on the faucet itself. If the feature has been initiated, the LED will pulse Blue and gradually change to Violet before the faucet turns off. After the faucet turns off by itself, you can confirm the feature has worked correctly by pressing the **Warm Up Water** button in the driver once again. If the water is already at or near 95˚F, the faucet will turn off again within a few seconds.
+
