@@ -35,6 +35,7 @@ Change history:
 1.18 - TomW - Code optimization
 1.19 - logname - Add notation to omit colons and spaces from MAC Address in device Preferences
 1.20 - logname - Handle Delta's double-encoded JSON responses (raw text parsing); fixed switch event description
+1.21 - logname - Added Warm Up Water command and required Delta device name preference
 
 */
 import groovy.json.JsonSlurper
@@ -57,6 +58,7 @@ metadata
         attribute "usageLastYear", "number"
         
         command "saveToken", ["Token"]
+        command "warmUpWater", [[name: "Warm Up Water", description: "Make sure the handle is set to HOT"]]
         command "dispense_fl_oz", [[name: "Fluid Ounces", title: "Dispense fl oz", type: "NUMBER", description: "Input number of fluid ounces to dispense (integers only)"]] //30 mL
         command "dispense_c", [[name: "Cups", title: "Dispense cups", type: "NUMBER", description: "Input number of cups to dispense (integers only)"]] //237 mL
         command "dispense_pt", [[name: "Pints", title: "Dispense pints", type: "NUMBER", description: "Input number of pints to dispense (integers only)"]] //473 mL
@@ -75,6 +77,7 @@ metadata
 preferences
 {
     input(name: "delta_device_id", type: "text", title: "Delta Device macAddress", description: "Enter Device MAC Address (without : or spaces)", defaultValue: "")
+    input(name: "delta_device_name", type: "text", title: "Delta device name", description: "Shown in the Custom Names menu on the Delta portal, i.e. Kitchen Faucet (exact spelling and case)", defaultValue: "")
     input(name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: true)
 }
 
@@ -160,6 +163,37 @@ def saveToken(token)
 def currentToken()
 {
     return device.getDataValue("token")
+}
+
+def warmUpWater(ignored = null)
+{
+    def name = settings.delta_device_name?.trim()
+    if (!name)
+    {
+        log.error "Warm Up Water: enter the Delta device name in Preferences first."
+        return
+    }
+
+    try
+    {
+        if (logEnable) { log.debug "Sending preheat command for '${name}'." }
+        def response = postChangeStateV4([Device: name, State: "preheat"])
+        if (logEnable) { log.debug "Response (from warmUpWater): ${response?.status} ${response?.data}" }
+
+        def apiStatus = (response?.data instanceof Map) ? response.data.status : null
+        if (response?.status?.toInteger() == 200 && apiStatus == 0)
+        {
+            if (logEnable) { log.debug "Warm Up Water request accepted." }
+        }
+        else
+        {
+            log.error "Warm Up Water failed: HTTP ${response?.status}, body ${response?.data}"
+        }
+    }
+    catch (Exception e)
+    {
+        log.error "Error warming up water: ${e.message}"
+    }
 }
 
 private toggleWater(String toggle)
@@ -361,6 +395,46 @@ def httpExec(operation, String path)
         else httpGet(params, closure)
     } catch (groovyx.net.http.HttpResponseException e) {
         log.error "HTTP ${e.statusCode} from ${path}: ${e.response?.data}"
+    }
+    return result
+}
+
+private postChangeStateV4(Map body)
+{
+    def result = null
+    def params = [
+        uri: "https://device.deltafaucet.com/api/voice/v4/changeState",   // hard-coded on purpose
+        headers: [
+            'Authorization': "Bearer ${currentToken()?.trim()}",
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Referer': 'https://device.deltafaucet.com/',
+            'Origin': 'https://device.deltafaucet.com'
+        ],
+        requestContentType: 'application/json',
+        body: body,
+        textParser: true
+    ]
+
+    def closure = { resp ->
+        def raw = resp.data
+        def text = (raw instanceof String) ? raw : raw?.text
+        def parsed = text
+        try {
+            def t = text?.trim()
+            if (t && t.length() >= 2 && t.startsWith('"') && t.endsWith('"')) {
+                t = t.substring(1, t.length() - 1).replace('\\"', '"')
+            }
+            if (t) parsed = new JsonSlurper().parseText(t)
+        } catch (Exception e) {
+            if (logEnable) log.debug "Could not parse response as JSON: ${text}"
+        }
+        result = [status: resp.status, data: parsed]
+    }
+
+    try {
+        httpPost(params, closure)
+    } catch (groovyx.net.http.HttpResponseException e) {
+        log.error "HTTP ${e.statusCode} from changeState: ${e.response?.data}"
     }
     return result
 }
