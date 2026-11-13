@@ -34,9 +34,10 @@ Change history:
 1.17 - logname - Fixed typo in queryUsageReport and missing 0 in millileter to Liter conversion
 1.18 - TomW - Code optimization
 1.19 - logname - Add notation to omit colons and spaces from MAC Address in device Preferences
+1.20 - logname - Handle Delta's double-encoded JSON responses (raw text parsing); fixed switch event description
 
 */
-//import groovy.json.JsonSlurper
+import groovy.json.JsonSlurper
 //import groovy.transform.Field
 metadata
 {
@@ -57,16 +58,16 @@ metadata
         
         command "saveToken", ["Token"]
         command "dispense_fl_oz", [[name: "Fluid Ounces", title: "Dispense fl oz", type: "NUMBER", description: "Input number of fluid ounces to dispense (integers only)"]] //30 mL
-		command "dispense_c", [[name: "Cups", title: "Dispense cups", type: "NUMBER", description: "Input number of cups to dispense (integers only)"]] //237 mL
-		command "dispense_pt", [[name: "Pints", title: "Dispense pints", type: "NUMBER", description: "Input number of pints to dispense (integers only)"]] //473 mL
-		command "dispense_qt", [[name: "Quarts", title: "Dispense quarts", type: "NUMBER", description: "Input number of quarts to dispense (integers only)"]] //946 mL
-		command "dispense_gal", [[name: "Gallons", title: "Dispense gallons", type: "NUMBER", description: "Input number of gallons to dispense (integers only)"]] //3785 mL
+        command "dispense_c", [[name: "Cups", title: "Dispense cups", type: "NUMBER", description: "Input number of cups to dispense (integers only)"]] //237 mL
+        command "dispense_pt", [[name: "Pints", title: "Dispense pints", type: "NUMBER", description: "Input number of pints to dispense (integers only)"]] //473 mL
+        command "dispense_qt", [[name: "Quarts", title: "Dispense quarts", type: "NUMBER", description: "Input number of quarts to dispense (integers only)"]] //946 mL
+        command "dispense_gal", [[name: "Gallons", title: "Dispense gallons", type: "NUMBER", description: "Input number of gallons to dispense (integers only)"]] //3785 mL
         command "dispense_mL", [[name: "Milliliters", title: "Dispense mL", type: "NUMBER", description: "Input number of milliliters to dispense (integers only)"]]
-		command "dispense_cL", [[name: "Centiliters", title: "Dispense cL", type: "NUMBER", description: "Input number of centiliters to dispense (integers only)"]] //10 mL
-		command "dispense_dL", [[name: "Deciliters", title: "Dispense dL", type: "NUMBER", description: "Input number of deciliters to dispense (integers only)"]] //100 mL
-		command "dispense_L", [[name: "Liters", title: "Dispense L", type: "NUMBER", description: "Input number of liters to dispense (integers only)"]] //1000 mL        
-		command "fill_glass", [[name: "Fill Glass", title: "Fill Glass", description: "Dispense 1 glass (12 fl oz) of water"]] //355 mL
-		command "fill_coffee_pot", [[name: "Fill Coffee Pot", title: "Fill Coffee Pot", description: "Dispense 4 cups (32 fl oz) of water"]] //943 mL
+        command "dispense_cL", [[name: "Centiliters", title: "Dispense cL", type: "NUMBER", description: "Input number of centiliters to dispense (integers only)"]] //10 mL
+        command "dispense_dL", [[name: "Deciliters", title: "Dispense dL", type: "NUMBER", description: "Input number of deciliters to dispense (integers only)"]] //100 mL
+        command "dispense_L", [[name: "Liters", title: "Dispense L", type: "NUMBER", description: "Input number of liters to dispense (integers only)"]] //1000 mL        
+        command "fill_glass", [[name: "Fill Glass", title: "Fill Glass", description: "Dispense 1 glass (12 fl oz) of water"]] //355 mL
+        command "fill_coffee_pot", [[name: "Fill Coffee Pot", title: "Fill Coffee Pot", description: "Dispense 4 cups (32 fl oz) of water"]] //943 mL
         command "queryUsageReport", [[name: "Time interval", title: "Query Usage Report", type:"ENUM", constraints: knownTimePeriods().keySet()]]        
      }
 }
@@ -142,7 +143,7 @@ def queryUsageReport(interval)
         }
         else
         {
-            log.error "Usage Report ${interval} failed: ${response.status}"
+            log.error "Usage Report ${interval} failed: ${response?.status}"
         }
     }
     catch(Exception e)
@@ -168,8 +169,9 @@ private toggleWater(String toggle)
         if (logEnable){log.debug "Preparing the ${toggle} command to send to Delta."}
         
         def response = httpExec("POST", "/v3/toggleWater?macAddress=${delta_device_id}&toggle=${toggle}")
-        if (logEnable){log.debug "Response Status (from toggleWater): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from toggleWater): ${response.data}"}
+        //log.info "toggleWater ${toggle}: response = ${response}"
+        if (logEnable){log.debug "Response Status (from toggleWater): ${response?.status}"}
+        if (logEnable){log.debug "Response Data (from toggleWater): ${response?.data}"}
         
         if(response?.status?.toInteger() == 200)
         {
@@ -179,7 +181,7 @@ private toggleWater(String toggle)
         }
         else
         {
-            log.error "Toggle water ${toggle} failed: ${response.status}"
+            log.error "Toggle water ${toggle} failed: ${response?.status}"
         }
     }
     catch(Exception e)
@@ -194,8 +196,8 @@ private dispense_mL(mL_toDispense)
     {
         if (logEnable){log.debug "Preparing the ${mL_toDispense} mL to dispense command to send to Delta."}
         def response = httpExec("POST", "/v2/dispense?macAddress=${delta_device_id}&milliliters=${mL_toDispense}")
-        if (logEnable){log.debug "Response Status (from dispense_mL): ${response.status}"}
-        if (logEnable){log.debug "Response Data (from dispense_mL): ${response.data}"}
+        if (logEnable){log.debug "Response Status (from dispense_mL): ${response?.status}"}
+        if (logEnable){log.debug "Response Data (from dispense_mL): ${response?.data}"}
         
         if(response?.status?.toInteger() == 200)
         {
@@ -217,7 +219,7 @@ private dispense_mL(mL_toDispense)
         }
         else
         {
-            log.error "Dispense mL failed: ${response.status}"
+            log.error "Dispense mL failed: ${response?.status}"
         }
     }
     catch(Exception e)
@@ -311,7 +313,7 @@ def sendSwitchState(value, timeout = null)
     unschedule(sendSwitchState)
     
     // set presence to incoming state
-    sendEvent(name: "switch", value: value, descriptionText: "${device.displayName} is off")
+    sendEvent(name: "switch", value: value, descriptionText: "${device.displayName} is ${value}")
     if (logEnable) {log.debug "Timeout delay is set to ${timeout} seconds."}
     if(null != timeout)
     {
@@ -325,34 +327,40 @@ def sendSwitchState(value, timeout = null)
 def httpExec(operation, String path)
 {
     def result = null
-    
-    def httpClosure = 
-    { resp ->
-        result = resp
-    }
-    
-    def httpOp
-    
-    switch(operation)
-    {
-        case "POST":
-            httpOp = this.delegate.&httpPost
-            break
-        case "GET":
-            httpOp = this.delegate.&httpGet
-            break
-    }
-    
-    def deltaToken = "Bearer ${currentToken()}"
-    def apiUrl = "https://device.deltafaucet.com/api/device/" + path
-    def headers =
-        [
-            'Authorization': deltaToken, 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+    def params = [
+        uri: "https://device.deltafaucet.com/api/device/" + path,
+        headers: [
+            'Authorization': "Bearer ${currentToken()?.trim()}",
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             'Referer': 'https://device.deltafaucet.com/'
-        ]
-    
+        ],
+        textParser: true   // skip Hubitat's JSON parser, give us raw text
+    ]
+
+    def closure = { resp ->
+        def raw = resp.data
+        def text = (raw instanceof String) ? raw : raw?.text
+        //log.info "Raw response text: ${text}"
+        def parsed = text
+        try {
+            def t = text?.trim()
+            // strip wrapping quotes and unescape if the JSON was double-encoded
+            if (t && t.length() >= 2 && t.startsWith('"') && t.endsWith('"')) {
+                t = t.substring(1, t.length() - 1).replace('\\"', '"')
+            }
+            if (t) parsed = new JsonSlurper().parseText(t)
+        } catch (Exception e) {
+            if (logEnable) log.debug "Could not parse response as JSON: ${text}"
+        }
+        result = [status: resp.status, data: parsed]
+    }
+
     if (logEnable){log.debug "Sending the ${operation} for the command to be executed."}
-    httpOp(uri: apiUrl, headers: headers, httpClosure)
-    
+    try {
+        if (operation == "POST") httpPost(params, closure)
+        else httpGet(params, closure)
+    } catch (groovyx.net.http.HttpResponseException e) {
+        log.error "HTTP ${e.statusCode} from ${path}: ${e.response?.data}"
+    }
     return result
 }
