@@ -1,10 +1,14 @@
-Changelog v1.20
+Changelog
+
+v1.20
 
 Fixed
 * Double-encoded JSON responses. Delta’s API now returns bodies wrapped in an extra layer of quotes, e.g. "{"Success":true,"Message":""}". Hubitat’s built-in JSON parser rejected this and threw an exception, so toggleWater logged “Error toggling water” even though the faucet actually turned on. The driver now requests the raw text, strips the wrapping quotes, unescapes it, and parses it with JsonSlurper.
 * Switch state not updating. A side effect of the parsing exception was that the Hubitat switch state never changed after On/Off. It now updates correctly.
 * Wrong event description. sendSwitchState always reported “is off” in the event description, whatever the state. It now reports the actual state ("... is on" or "... is off").
+
 Changed
+
 * httpExec rewritten.
     * Uses textParser: true to bypass Hubitat’s JSON parsing.
     * Returns a normalized result of [status: ..., data: ...], so existing callers (toggleWater, dispense_mL, queryUsageReport) work unchanged.
@@ -22,3 +26,9 @@ Unchanged
 * All commands, preferences, dispense unit conversions and the usage refresh() logic, including the dataOffset = 1 setting. The note from earlier still applies: if you want the last full day rather than the current partial day, switch to the commented-out dataOffset line.
 Root cause
 Delta changed their server’s response format to double-encode JSON.
+
+v1.21
+
+Feature added
+
+*Added Warm Up Water command and required Delta device name preference
