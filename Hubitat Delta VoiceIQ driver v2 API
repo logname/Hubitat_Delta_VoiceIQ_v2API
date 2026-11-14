@@ -36,7 +36,7 @@ Change history:
 1.19 - logname - Add notation to omit colons and spaces from MAC Address in device Preferences
 1.20 - logname - Handle Delta's double-encoded JSON responses (raw text parsing); fixed switch event description
 1.21 - logname - Added Warm Up Water command and required Delta device name preference
-1.22 - logname - Added Acutuator capability for use in Rule Machine
+1.22 - logname - Added Actuator capability for use in Rule Machine
 
 */
 import groovy.json.JsonSlurper
