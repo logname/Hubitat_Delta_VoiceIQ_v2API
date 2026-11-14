@@ -32,3 +32,9 @@ v1.21
 Feature added
 
 * Added Warm Up Water command and required Delta device name preference
+
+v1.22
+
+Fixed
+
+* Added Acutuator capability for use in Rule Machine
